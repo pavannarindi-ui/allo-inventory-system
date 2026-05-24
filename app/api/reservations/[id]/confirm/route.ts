@@ -1,22 +1,33 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 export async function POST(
-  req: Request,
-  { params }: {
-    params: { id: string }
+  req: NextRequest,
+
+  context: {
+    params: Promise<{
+      id: string;
+    }>;
   }
 ) {
 
   try {
+
+    const { id } =
+      await context.params;
 
     await prisma.$transaction(
       async (tx) => {
 
         const reservation =
           await tx.reservation.findUnique({
+
             where: {
-              id: params.id,
+              id,
             },
           });
 
@@ -45,8 +56,10 @@ export async function POST(
         }
 
         await tx.inventory.update({
+
           where: {
             productId_warehouseId: {
+
               productId:
                 reservation.productId,
 
@@ -70,12 +83,14 @@ export async function POST(
         });
 
         await tx.reservation.update({
+
           where: {
-            id: params.id,
+            id,
           },
 
           data: {
-            status: "CONFIRMED",
+            status:
+              "CONFIRMED",
           },
         });
       }
@@ -88,7 +103,8 @@ export async function POST(
   } catch (error: any) {
 
     if (
-      error.message === "EXPIRED"
+      error.message ===
+      "EXPIRED"
     ) {
 
       return NextResponse.json(
@@ -104,7 +120,8 @@ export async function POST(
 
     return NextResponse.json(
       {
-        error: "Failed to confirm",
+        error:
+          "Confirmation failed",
       },
       {
         status: 500,

@@ -1,22 +1,33 @@
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
+
+import {
+  NextRequest,
+  NextResponse,
+} from "next/server";
 
 export async function POST(
-  req: Request,
-  { params }: {
-    params: { id: string }
+  req: NextRequest,
+
+  context: {
+    params: Promise<{
+      id: string;
+    }>;
   }
 ) {
 
   try {
+
+    const { id } =
+      await context.params;
 
     await prisma.$transaction(
       async (tx) => {
 
         const reservation =
           await tx.reservation.findUnique({
+
             where: {
-              id: params.id,
+              id,
             },
           });
 
@@ -36,8 +47,10 @@ export async function POST(
         }
 
         await tx.inventory.update({
+
           where: {
             productId_warehouseId: {
+
               productId:
                 reservation.productId,
 
@@ -47,6 +60,7 @@ export async function POST(
           },
 
           data: {
+
             reservedStock: {
               decrement:
                 reservation.quantity,
@@ -55,12 +69,14 @@ export async function POST(
         });
 
         await tx.reservation.update({
+
           where: {
-            id: params.id,
+            id,
           },
 
           data: {
-            status: "RELEASED",
+            status:
+              "RELEASED",
           },
         });
       }
@@ -74,7 +90,8 @@ export async function POST(
 
     return NextResponse.json(
       {
-        error: "Release failed",
+        error:
+          "Release failed",
       },
       {
         status: 500,
